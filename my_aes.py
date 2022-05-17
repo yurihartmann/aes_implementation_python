@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 from typing import List
 
@@ -87,14 +88,38 @@ class MyAES:
 
         self.rounds_keys.append(new_round)
 
+    @classmethod
+    def generate_PKCS5(cls, n: int):
+        return [n for _ in range(n)]
+
     def encrypty(self, file_path):
         # Le o arquivo
         file = open(file_path, mode='rb')
         file_out = open(file_path + ".bin", mode='wb')
-
+        file_size = (os.path.getsize(file_path) / 16) + 1
         # Le os primeiro 16 bytes = 128 bits
         data = file.read(16)
-        while data:
+        need_padding = True
+
+        file_size_already_encrypty = 0
+        percentage_aux = (100 / file_size)
+        percentage = 0
+
+        while data or need_padding:
+            # Porcentagem
+            file_size_already_encrypty += 1
+
+            percentage_now = int(percentage_aux * file_size_already_encrypty)
+            if percentage < percentage_now:
+                percentage = percentage_now
+                print(percentage_now, "%")
+
+            data = list(data)
+
+            if len(data) < 16:
+                need_padding = False
+                data += self.generate_PKCS5(16 - len(data))
+
             # Transforma em matrix
             matrix = self.__list_to_matrix(list(data))
 
@@ -118,7 +143,8 @@ class MyAES:
         # XOR da matrix com primeira round_key
         self.__add_round_key(matrix, self.rounds_keys[:4])
 
-        print_matrix(matrix)
+        if self.debug:
+            print_matrix(matrix)
 
         for i in range(1, 10):  # range(1, 10)
             round_key = self.rounds_keys[4 * i: 4 * (i + 1)]
